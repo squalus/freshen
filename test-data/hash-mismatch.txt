@@ -1,0 +1,23 @@
+offline> downloading https://registry.yarnpkg.com/workbox-routing/-/workbox-routing-6.5.4.tgz
+offline> downloading https://registry.yarnpkg.com/workbox-strategies/-/workbox-strategies-6.5.4.tgz
+offline> downloading https://registry.yarnpkg.com/workbox-streams/-/workbox-streams-6.5.4.tgz
+offline> downloading https://registry.yarnpkg.com/workbox-sw/-/workbox-sw-6.5.4.tgz
+offline> downloading https://registry.yarnpkg.com/workbox-window/-/workbox-window-6.5.4.tgz
+offline> downloading https://registry.yarnpkg.com/wrappy/-/wrappy-1.0.2.tgz
+offline> downloading https://registry.yarnpkg.com/xml-js/-/xml-js-1.6.11.tgz
+offline> downloading https://registry.yarnpkg.com/xml-name-validator/-/xml-name-validator-4.0.0.tgz
+offline> downloading https://registry.yarnpkg.com/yallist/-/yallist-4.0.0.tgz
+offline> downloading https://registry.yarnpkg.com/yaml-eslint-parser/-/yaml-eslint-parser-0.3.2.tgz
+offline> downloading https://registry.yarnpkg.com/yaml/-/yaml-1.10.2.tgz
+offline> downloading https://registry.yarnpkg.com/yocto-queue/-/yocto-queue-0.1.0.tgz
+offline> Done
+offline> buildPhase completed in 47 seconds
+offline> post-installation fixup
+offline> shrinking RPATHs of ELF executables and libraries in /nix/store/9nyg6qj21776n21jvrcww9q0bi22bwxh-offline
+offline> strip is /nix/store/dq0xwmsk1g0i2ayg6pb7y87na2knzylh-gcc-wrapper-11.3.0/bin/strip
+offline> patching script interpreter paths in /nix/store/9nyg6qj21776n21jvrcww9q0bi22bwxh-offline
+offline> checking for references to /build/ in /nix/store/9nyg6qj21776n21jvrcww9q0bi22bwxh-offline...
+error: hash mismatch in fixed-output derivation '/nix/store/mfjrnj0xlw68j8lx5g6lnv4y90wjmbmc-offline.drv':
+         specified: sha256-AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+            got:    sha256-If5iev47iRxpVvaB7WrfV1U1xaujUsS/113cprtvaB0=
+
