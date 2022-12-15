@@ -83,7 +83,7 @@ func (u *RemoteUpdateCmd) Run() error {
 }
 
 func validateRepoPath(repoPath string) error {
-	_, err := os.Stat(path.Join(repoPath, "LICENSE"))
+	_, err := os.Stat(path.Join(repoPath, "flake.nix"))
 	if err != nil {
 		return fmt.Errorf("check repo path. repoPath=%s does not look valid: %w", repoPath, err)
 	}
