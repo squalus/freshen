@@ -18,5 +18,13 @@
           type = "app";
           program = "${self.packages.${system}.default}/bin/freshen";
         };
+        devShells.default = pkgs.mkShell {
+          inputsFrom = [
+            self.packages.${system}.default
+          ];
+          nativeBuildInputs = [
+            pkgs.golangci-lint
+          ];
+        };
       });
 }
