@@ -225,7 +225,7 @@ func (a *UpdateSpec) updatedDerivedHash(config UpdateDerivedConfig) (*UpdateInpu
 func readJsonStringFile(path string) (out string, err error) {
 	buf, err := os.ReadFile(path)
 	if err != nil {
-		return "", nil
+		return "", err
 	}
 	if err = json.Unmarshal(buf, &out); err != nil {
 		return "", err
