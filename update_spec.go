@@ -69,7 +69,6 @@ func (a *UpdateSpec) RunUpdateName(name string, check bool) (UpdateResult, error
 		}
 		log.Printf("name=%s inputName=%s %s -> %s", config.Name, inputName, result.old, result.new)
 		anyInputChanged = true
-
 	}
 
 	if anyInputChanged {
@@ -83,23 +82,28 @@ func (a *UpdateSpec) RunUpdateName(name string, check bool) (UpdateResult, error
 	}
 
 	log.Printf("name=%s updating derived hashes", config.Name)
-	var anyDerivedUpdated bool
-	for _, derivedConfig := range config.DerivedHashes {
-		result, err := a.updatedDerivedHash(derivedConfig)
+	if len(config.DerivedHashes) > 0 {
+		derivedHashesResult, err := a.updateDerivedHashes(config)
 		if err != nil {
-			return UpdateResult{}, fmt.Errorf("updateDerivedHash attrPath=%s: %w", config.MainAttrPath, err)
+			return UpdateResult{}, fmt.Errorf("updateDerivedHash: attrPath=%s %w", config.MainAttrPath, err)
 		}
-		if result == nil {
-			log.Printf("name=%s derivedAttrPath=%s no change", config.Name, derivedConfig.AttrPath)
-			continue
+		if derivedHashesResult.empty() {
+			log.Printf("name=%s no derived attrPath changed", config.Name)
 		}
-		log.Printf("name=%s derivedAttrPath=%s %s -> %s", config.Name, derivedConfig.AttrPath, result.old, result.new)
-		out.addPaths(result.pathsChanged)
-		anyDerivedUpdated = true
+		out.union(derivedHashesResult)
 	}
-	if !anyDerivedUpdated {
-		log.Printf("name=%s no derived attrPath changed", config.Name)
+
+	if len(config.UpdateScripts) > 0 {
+		updateScriptResult, err := a.runUpdateScripts(config)
+		if err != nil {
+			return UpdateResult{}, fmt.Errorf("updateScriptResult: attrPath=%s %w", config.MainAttrPath, err)
+		}
+		if updateScriptResult.empty() {
+			log.Printf("name=%s updateScript did not change any files", config.Name)
+		}
+		out.union(updateScriptResult)
 	}
+
 	if out.empty() && !check {
 		return UpdateResult{}, nil
 	}
@@ -108,7 +112,7 @@ func (a *UpdateSpec) RunUpdateName(name string, check bool) (UpdateResult, error
 		log.Printf("name=%s no main derivation", config.Name)
 	} else {
 		log.Printf("name=%s building main derivation", config.Name)
-		if _, _, err = a.Flake.Build(config.MainAttrPath, true); err != nil {
+		if _, _, err = a.Flake.BuildWithRawOutput(config.MainAttrPath, true); err != nil {
 			return UpdateResult{}, fmt.Errorf("name=%s main derivation build failed %w", config.Name, err)
 		}
 	}
@@ -116,50 +120,45 @@ func (a *UpdateSpec) RunUpdateName(name string, check bool) (UpdateResult, error
 	log.Printf("name=%s building tests", config.Name)
 	for _, testConfig := range config.Tests {
 		log.Printf("name=%s building test attrPath=%s", config.Name, testConfig.AttrPath)
-		if _, _, err = a.Flake.Build(testConfig.AttrPath, !testConfig.DisableSandbox); err != nil {
+		if _, _, err = a.Flake.BuildWithRawOutput(testConfig.AttrPath, !testConfig.DisableSandbox); err != nil {
 			return UpdateResult{}, fmt.Errorf("name=%s testAttrPath=%s test failed %w", config.Name, testConfig.AttrPath, err)
 		}
 	}
 	return out, nil
 }
 
-type UpdateResult struct {
-	// changed paths, relative to repo root
-	pathsChanged map[string]struct{}
-}
-
-func NewUpdateResult() UpdateResult {
-	return UpdateResult{
-		pathsChanged: make(map[string]struct{}),
+func (a *UpdateSpec) updateDerivedHashes(config *UpdateTask) (UpdateResult, error) {
+	out := NewUpdateResult()
+	for _, derivedConfig := range config.DerivedHashes {
+		result, err := a.updatedDerivedHash(derivedConfig)
+		if err != nil {
+			return NewUpdateResult(), fmt.Errorf("updateDerivedHash: %w", err)
+		}
+		if result == nil {
+			log.Printf("name=%s derivedAttrPath=%s no change", config.Name, derivedConfig.AttrPath)
+			continue
+		}
+		log.Printf("name=%s derivedAttrPath=%s %s -> %s", config.Name, derivedConfig.AttrPath, result.old, result.new)
+		out.addPaths(result.pathsChanged)
 	}
+	return out, nil
 }
 
-func (u *UpdateResult) union(other UpdateResult) {
-	for pathChanged, _ := range other.pathsChanged {
-		u.addPath(pathChanged)
+func (a *UpdateSpec) runUpdateScripts(config *UpdateTask) (UpdateResult, error) {
+	out := NewUpdateResult()
+	for _, updateScript := range config.UpdateScripts {
+		log.Printf("name=%s running update script attrPath=%s command=%s", config.Name, updateScript.AttrPath, updateScript.Command)
+		scriptOutput, err := a.Flake.Build(updateScript.AttrPath)
+		if err != nil {
+			return NewUpdateResult(), fmt.Errorf("flake.Build attrPath=%s: %w", updateScript.AttrPath, err)
+		}
+		scriptOut, err := RunUpdateScript(scriptOutput, &updateScript, a.Flake.Path)
+		if err != nil {
+			return NewUpdateResult(), fmt.Errorf("RunUpdateScript: %w", err)
+		}
+		out.union(scriptOut)
 	}
-}
-
-func (u *UpdateResult) addPath(path string) {
-	u.pathsChanged[path] = struct{}{}
-}
-
-func (u *UpdateResult) addPaths(paths []string) {
-	for _, pathChanged := range paths {
-		u.addPath(pathChanged)
-	}
-}
-
-func (u *UpdateResult) getPathsChanged() []string {
-	out := make([]string, 0, len(u.pathsChanged))
-	for k, _ := range u.pathsChanged {
-		out = append(out, k)
-	}
-	return out
-}
-
-func (u *UpdateResult) empty() bool {
-	return len(u.pathsChanged) == 0
+	return out, nil
 }
 
 type UpdateInputResult struct {
@@ -193,14 +192,14 @@ func (a *UpdateSpec) updateInput(name string, oldLocks flake.Locks) (*UpdateInpu
 }
 
 func (a *UpdateSpec) updatedDerivedHash(config UpdateDerivedConfig) (*UpdateInputResult, error) {
-	_, stderr, err := a.Flake.Build(config.AttrPath, true)
+	_, stderr, err := a.Flake.BuildWithRawOutput(config.AttrPath, true)
 	if err == nil {
-		return nil, fmt.Errorf("attrPath=%s build unexpectedly succeeded", config.AttrPath)
+		return nil, fmt.Errorf("build unexpectedly succeeded")
 	}
 
 	hashMismatchResult, err := FindHashMismatch(stderr)
 	if err != nil {
-		return nil, fmt.Errorf("attrPath=%s: findHashMismatchResult %w", config.AttrPath, err)
+		return nil, fmt.Errorf("findHashMismatchResult %w", err)
 	}
 	var out UpdateInputResult
 	out.new = hashMismatchResult.Got
@@ -208,7 +207,7 @@ func (a *UpdateSpec) updatedDerivedHash(config UpdateDerivedConfig) (*UpdateInpu
 	hashFilePath := path.Join(a.Flake.Path, config.Filename)
 	out.old, err = readJsonStringFile(hashFilePath)
 	if err != nil {
-		return nil, fmt.Errorf("attrPath=%s: readJsonStringFile hashFilePath=%s %w", config.AttrPath, config.Filename, err)
+		return nil, fmt.Errorf("readJsonStringFile hashFilePath=%s %w", config.Filename, err)
 	}
 
 	if out.old == out.new {
@@ -216,7 +215,7 @@ func (a *UpdateSpec) updatedDerivedHash(config UpdateDerivedConfig) (*UpdateInpu
 	}
 
 	if err := writeJsonStringFile(hashMismatchResult.Got, hashFilePath); err != nil {
-		return nil, fmt.Errorf("attrPath=%s writeJsonStringFile hashFilePath=%s %w", config.AttrPath, hashFilePath, err)
+		return nil, fmt.Errorf("writeJsonStringFile hashFilePath=%s %w", hashFilePath, err)
 	}
 	out.pathsChanged = []string{config.Filename}
 	return &out, nil

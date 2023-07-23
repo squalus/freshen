@@ -21,10 +21,19 @@ type UpdateTask struct {
 	Inputs []string `json:"inputs"`
 	// Info about the derived hashes that need updating when the flake inputs update
 	DerivedHashes []UpdateDerivedConfig `json:"derived_hashes"`
+	// AttrPaths of update scripts to be run. Scripts will be executed with the flake root as the working directory.
+	UpdateScripts []UpdateScript `json:"update_scripts"`
 	// AttrPaths that will test the build
 	Tests []TestConfig `json:"tests"`
 	// Names of other required update tasks. These must all be updated successfully for the task to succeed
 	RequiredUpdateTasks []string `json:"required_update_tasks"`
+}
+
+type UpdateScript struct {
+	// AttrPath is the attr path of the update script
+	AttrPath string `json:"attr_path"`
+	// Command is the filename of the command to execute, relative to the root of the script output in the Nix store
+	Command string `json:"command"`
 }
 
 // UpdateDerivedConfig describes the update tasks derived from a build
