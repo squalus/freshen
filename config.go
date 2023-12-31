@@ -32,8 +32,10 @@ type UpdateTask struct {
 type UpdateScript struct {
 	// AttrPath is the attr path of the update script
 	AttrPath string `json:"attr_path"`
-	// Command is the filename of the command to execute, relative to the root of the script output in the Nix store
-	Command string `json:"command"`
+	// Executable is the file path of the command to execute, relative to the root of the script output in the Nix store
+	Executable string `json:"executable"`
+	// Arguments provided to the executable, if any
+	Args []string `json:"args"`
 }
 
 // UpdateDerivedConfig describes the update tasks derived from a build

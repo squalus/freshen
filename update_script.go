@@ -34,9 +34,10 @@ func RunUpdateScript(scriptOutput string, config *UpdateScript, flakeRoot string
 	if err != nil {
 		return UpdateResult{}, fmt.Errorf("prepareGit: %w", err)
 	}
-	executable := path.Join(scriptOutput, config.Command)
+	executable := path.Join(scriptOutput, config.Executable)
 	cmd := exec.Cmd{
 		Path:   executable,
+		Args:   append([]string{executable}, config.Args...),
 		Dir:    tmpDir,
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,

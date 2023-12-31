@@ -147,7 +147,7 @@ func (a *UpdateSpec) updateDerivedHashes(config *UpdateTask) (UpdateResult, erro
 func (a *UpdateSpec) runUpdateScripts(config *UpdateTask) (UpdateResult, error) {
 	out := NewUpdateResult()
 	for _, updateScript := range config.UpdateScripts {
-		log.Printf("name=%s running update script attrPath=%s command=%s", config.Name, updateScript.AttrPath, updateScript.Command)
+		log.Printf("name=%s running update script attrPath=%s executable=%s args=%s", config.Name, updateScript.AttrPath, updateScript.Executable, updateScript.Args)
 		scriptOutput, err := a.Flake.Build(updateScript.AttrPath)
 		if err != nil {
 			return NewUpdateResult(), fmt.Errorf("flake.Build attrPath=%s: %w", updateScript.AttrPath, err)
