@@ -36,6 +36,8 @@ type UpdateScript struct {
 	Executable string `json:"executable"`
 	// Arguments provided to the executable, if any
 	Args []string `json:"args"`
+	// When the script should run. Valid values: [on_flake_input_change, always]. Default if not specified: on_flake_input_change.
+	RunMode string `json:"run_mode"`
 }
 
 // UpdateDerivedConfig describes the update tasks derived from a build
@@ -44,6 +46,8 @@ type UpdateDerivedConfig struct {
 	AttrPath string `json:"attr_path"`
 	// Filename where the derived hash is stored as a JSON string. Relative to the flake root.
 	Filename string `json:"filename"`
+	// When the task should run. Valid values: [on_flake_input_change, always]. Default if not specified: on_flake_input_change.
+	RunMode string `json:"run_mode"`
 }
 
 // TestConfig describes tests that will run to verify an update

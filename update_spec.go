@@ -27,6 +27,11 @@ func NewUpdateSpec(config *FreshenConfig, flake flake.Flake) *UpdateSpec {
 	return &out
 }
 
+type RunMode string
+
+const RunModeOnFlakeInputChange RunMode = "on_flake_input_change"
+const RunModeAlways RunMode = "always"
+
 func (a *UpdateSpec) RunUpdateName(name string, check bool) (UpdateResult, error) {
 	config, ok := a.nameToConfig[name]
 	if !ok {
@@ -71,18 +76,34 @@ func (a *UpdateSpec) RunUpdateName(name string, check bool) (UpdateResult, error
 		anyInputChanged = true
 	}
 
+	var derivedHashes []UpdateDerivedConfig
+	var updateScripts []UpdateScript
+
 	if anyInputChanged {
 		out.addPath("flake.lock")
+		derivedHashes = config.DerivedHashes
+		updateScripts = config.UpdateScripts
 	} else {
 		log.Printf("name=%s: no inputs changed", config.Name)
+		for _, derivedHash := range config.DerivedHashes {
+			if derivedHash.RunMode == string(RunModeAlways) {
+				derivedHashes = append(derivedHashes, derivedHash)
+			}
+		}
+		for _, updateScript := range config.UpdateScripts {
+			if updateScript.RunMode == string(RunModeAlways) {
+				updateScripts = append(updateScripts, updateScript)
+			}
+		}
 	}
 
-	if out.empty() && !check {
+	continueRunning := !out.empty() || check || (len(derivedHashes) > 0 || len(updateScripts) > 0)
+	if !continueRunning {
 		return UpdateResult{}, nil
 	}
 
 	log.Printf("name=%s updating derived hashes", config.Name)
-	if len(config.DerivedHashes) > 0 {
+	if len(derivedHashes) > 0 {
 		derivedHashesResult, err := a.updateDerivedHashes(config)
 		if err != nil {
 			return UpdateResult{}, fmt.Errorf("updateDerivedHash: attrPath=%s %w", config.MainAttrPath, err)
@@ -93,7 +114,8 @@ func (a *UpdateSpec) RunUpdateName(name string, check bool) (UpdateResult, error
 		out.union(derivedHashesResult)
 	}
 
-	if len(config.UpdateScripts) > 0 {
+	log.Printf("name=%s running update scripts", config.Name)
+	if len(updateScripts) > 0 {
 		updateScriptResult, err := a.runUpdateScripts(config)
 		if err != nil {
 			return UpdateResult{}, fmt.Errorf("updateScriptResult: attrPath=%s %w", config.MainAttrPath, err)
