@@ -2,7 +2,7 @@
   description = "Freshen";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs/release-23.11";
+    nixpkgs.url = "github:nixos/nixpkgs/release-24.05";
     flake-utils.url = "flake:flake-utils";
   };
 
