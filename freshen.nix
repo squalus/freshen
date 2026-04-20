@@ -2,7 +2,7 @@
 buildGoModule {
   name = "freshen";
   src = ./.;
-  vendorHash = "sha256-+F794ZBQGHuTVUkDdyIc8SNiCVbkRtfMSs7IbFYR4VE=";
+  vendorHash = "sha256-A5tJz/2jdAFxzaGIuAvZHW5x1yXYTZjhd7l/OADiKSM=";
   nativeBuildInputs = [ makeWrapper ];
   postInstall = ''
     wrapProgram $out/bin/freshen --prefix PATH : ${nix}/bin
